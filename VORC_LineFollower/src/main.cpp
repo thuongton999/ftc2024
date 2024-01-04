@@ -4,17 +4,19 @@
 #include <PID.h>
 #include "__define.h"
 
-#define KP 80
+// #define KP 100
+// #define KI 0
+// #define KD 460
+#define KP 0.135
 #define KI 0
-#define KD 320
+#define KD 20
 
 int16_t weighted_x[NUM_IR_SENSORS] = {-30, -15, 15, 30};
 uint8_t SENSOR_PINS[NUM_IR_SENSORS] = {
-    SENSOR_1_PIN,
-    SENSOR_2_PIN,
-    SENSOR_3_PIN,
-    SENSOR_4_PIN
-};
+	SENSOR_1_PIN,
+	SENSOR_2_PIN,
+	SENSOR_3_PIN,
+	SENSOR_4_PIN};
 
 MotorDriver motor_driver;
 IR_Sensor_Array ir_sensor_array;
@@ -51,67 +53,7 @@ void setup_pid_controller()
 	pid_controller.set_target(0);
 }
 
-// print calibrated values
-void print_calibrated_values()
-{
-	Serial.println("Sensors\tS1\tS2\tS3\tS4");
-	Serial.print("White\t");
-	for (int i = 0; i < NUM_IR_SENSORS; i++)
-	{
-		Serial.print(ir_sensor_array.get_white(i));
-		Serial.print("\t");
-	}
-	Serial.println();
-	Serial.print("Black\t");
-	for (int i = 0; i < NUM_IR_SENSORS; i++)
-	{
-		Serial.print(ir_sensor_array.get_black(i));
-		Serial.print("\t");
-	}
-	Serial.println();
-	Serial.print("Min\t");
-	Serial.print(ir_sensor_array.get_calibrated_min());
-	Serial.print("\tMax\t");
-	Serial.print(ir_sensor_array.get_calibrated_max());
-}
-
-void print_line_position()
-{
-	Serial.println("\nSensors\tS1\tS2\tS3\tS4");
-	Serial.print("Raw\t");
-	for (int i = 0; i < NUM_IR_SENSORS; i++)
-	{
-		Serial.print(ir_sensor_array.get_ir(i));
-		Serial.print("\t");
-	}
-	Serial.println();
-	Serial.print("Avg\t");
-	for (int i = 0; i < NUM_IR_SENSORS; i++)
-	{
-		Serial.print(ir_sensor_array.get_avg(i));
-		Serial.print("\t");
-	}
-	Serial.print("Line Position: ");
-	Serial.println(ir_sensor_array.get_line_position(weighted_x));
-}
-
 bool calibrating = true;
-bool calibrated = false;
-void TriggerCalibrateMode()
-{
-	calibrating = !calibrating;
-	if (calibrated) {
-		print_line_position();
-		Serial.println("Bitmask: " + String(ir_sensor_array.get_bitmask(), BIN));
-	}
-}
-
-void setup_calibrate_mode()
-{
-	pinMode(BUTTON, INPUT_PULLUP);
-	attachInterrupt(BUTTON, TriggerCalibrateMode, RISING);
-}
-
 void calibrate_ir_array()
 {
 	motor_driver.turn_around_right();
@@ -121,9 +63,25 @@ void calibrate_ir_array()
 		ir_sensor_array.calibrate();
 	}
 	motor_driver.stop();
+	digitalWrite(WHITE_LED, LOW);
 	Serial.println("Calibrated!");
-	print_calibrated_values();
-	calibrated = true;
+}
+void TriggerCalibrateMode()
+{
+	calibrating = !calibrating;
+}
+void setup_interrupt()
+{
+	pinMode(BUTTON, INPUT_PULLUP);
+	attachInterrupt(BUTTON, TriggerCalibrateMode, RISING);
+}
+
+void drive_motor(double line_pos) {
+	int32_t output = std::round(pid_controller.update(line_pos));
+	int32_t left_motor = PWM_MAX + output;
+	int32_t right_motor = PWM_MAX - output;
+
+	motor_driver.set_speed(left_motor, right_motor);
 }
 
 void setup()
@@ -132,28 +90,19 @@ void setup()
 	setup_motor();
 	setup_ir_array();
 	setup_pid_controller();
+	setup_interrupt();
 
-	setup_calibrate_mode();
 	calibrate_ir_array();
-
-	delay(5000);
 }
 
-#define BASE_SPEED 3072
-int32_t left_motor = BASE_SPEED;
-int32_t right_motor = BASE_SPEED;
 void loop()
 {
-	if (!calibrated) return;
-	double line_pos = ir_sensor_array.get_line_position(weighted_x);
-	// if (ir_sensor_array.get_bitmask() == 0b0000) {
-	// 	// turn left 90 degrees
-	// 	motor_driver.set_speed_percentage(-75, 100);
-	// 	delay(200);
-	// 	return;
-	// }
-	int32_t output = std::round(pid_controller.update(line_pos));
-	left_motor = BASE_SPEED + output;
-	right_motor = BASE_SPEED - output;
-	motor_driver.set_speed(left_motor, right_motor);
+	double line_pos = ir_sensor_array.get_avg_line_position(weighted_x);
+	if (ir_sensor_array.get_bitmask() == 0b0000) {
+		// turn left 90 degrees
+		motor_driver.set_speed_percentage(-100, 100);
+		delay(225);
+		return;
+	}
+	drive_motor(line_pos);
 }

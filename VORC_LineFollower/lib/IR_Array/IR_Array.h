@@ -14,6 +14,7 @@ public:
     void calibrate();
     double get_line_position(int16_t x[NUM_IR_SENSORS]);
     double get_line_position(int16_t x[NUM_IR_SENSORS], double multiplier);
+    double get_avg_line_position(int16_t x[NUM_IR_SENSORS]);
     uint16_t get_ir(uint8_t index);
     uint16_t get_white(uint8_t index);
     uint16_t get_black(uint8_t index);
@@ -21,6 +22,8 @@ public:
     uint16_t get_calibrated_min();
     uint16_t get_calibrated_max();
     uint8_t get_bitmask();
+    void read_from_eeprom(uint16_t addr);
+    void save_to_eeprom(uint16_t addr);
 private:
     uint16_t y_min;
     uint16_t y_max;
@@ -29,9 +32,12 @@ private:
     uint16_t x_min[NUM_IR_SENSORS];
     uint16_t x_avg[NUM_IR_SENSORS];
     uint16_t x_offset[NUM_IR_SENSORS];
-    uint16_t __get_ir(uint8_t index);
     uint8_t SENSOR_PINS[NUM_IR_SENSORS];
     uint8_t BITMASK;
+    
+    uint16_t __get_ir(uint8_t index);
+    void __cache_x();
+    void __cache_y();
 };
 
 #endif

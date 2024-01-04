@@ -21,5 +21,6 @@
 #define WHITE_LED 20
 #define IR_ARRAY_LED 21
 #define BUTTON 7
+#define BUTTON1 9
 
 #endif

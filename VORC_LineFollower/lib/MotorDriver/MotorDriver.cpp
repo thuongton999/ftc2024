@@ -29,6 +29,7 @@ void MotorDriver::init_right_motor(uint8_t PWM_PIN_R_A, uint8_t PWM_PIN_R_B, uin
 void MotorDriver::set_speed(int32_t left, int32_t right) {
     left = constrain(left, -PWM_MAX, PWM_MAX);
     right = constrain(right, -PWM_MAX, PWM_MAX);
+
     if (left >= 0) {
         ledcWrite(left_motor_channel_a, left);
         ledcWrite(left_motor_channel_b, 0);
@@ -59,9 +60,6 @@ void MotorDriver::stop() {
 }
 
 void MotorDriver::differential_drive(uint16_t velocity, int16_t omega) {
-    int16_t left = velocity - omega;
-    int16_t right = velocity + omega;
-    set_speed(left, right);
 }
 
 void MotorDriver::turn_around_right() {
