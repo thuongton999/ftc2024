@@ -58,7 +58,7 @@ void calibrate_ir_array()
 {
 	motor_driver.turn_around_right();
 	Serial.println("Calibrating...");
-	for (;calibrating;)
+	for (; calibrating;)
 	{
 		ir_sensor_array.calibrate();
 	}
@@ -76,7 +76,8 @@ void setup_interrupt()
 	attachInterrupt(BUTTON, TriggerCalibrateMode, RISING);
 }
 
-void drive_motor(double line_pos) {
+void drive_motor(double line_pos)
+{
 	int32_t output = std::round(pid_controller.update(line_pos));
 	int32_t left_motor = PWM_MAX + output;
 	int32_t right_motor = PWM_MAX - output;
@@ -98,10 +99,11 @@ void setup()
 void loop()
 {
 	double line_pos = ir_sensor_array.get_avg_line_position(weighted_x);
-	if (ir_sensor_array.get_bitmask() == 0b0000) {
+	if (ir_sensor_array.get_bitmask() == 0b0000)
+	{
 		// turn left 90 degrees
-		motor_driver.set_speed_percentage(-100, 100);
-		delay(225);
+		motor_driver.set_speed_percentage(-75, 100);
+		delay(200);
 		return;
 	}
 	drive_motor(line_pos);
